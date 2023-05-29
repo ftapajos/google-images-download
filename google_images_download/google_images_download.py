@@ -7,6 +7,7 @@
 # Import Libraries
 import sys
 import selenium.common.exceptions
+from selenium.webdriver.common.by import By
 
 version = (3, 0)
 cur_version = sys.version_info
@@ -254,18 +255,21 @@ class googleimagesdownload:
     def download_extended_page(self, url, chromedriver, browser):
         from selenium import webdriver
         from selenium.webdriver.common.keys import Keys
+        from selenium.webdriver.chrome.service import Service
+
         if sys.version_info[0] < 3:
             reload(sys)
             sys.setdefaultencoding('utf8')
         options = webdriver.ChromeOptions()
         options.add_argument('--no-sandbox')
         options.add_argument("--headless")
+        options.add_argument('--disable-dev-shm-usage')   
 
         if browser == 'Firefox':
             browser = webdriver.Firefox()
         else:
             try:
-                browser = webdriver.Chrome(chromedriver, chrome_options=options)
+                browser = webdriver.Chrome(service=Service(chromedriver), chrome_options=options)
             except Exception as e:
                 print("Looks like we cannot locate the path the 'chromedriver' (use the '--chromedriver' "
                       "argument to specify the path to the executable.) or google chrome browser is not "
@@ -275,6 +279,16 @@ class googleimagesdownload:
 
         # Open the link
         browser.get(url)
+        
+        time.sleep(1)
+
+        # Bypass "Before you continue" if it appears
+        try:
+            browser.find_element(By.CSS_SELECTOR, "[aria-label='Accept all']").click()
+            time.sleep(1)
+        except selenium.common.exceptions.NoSuchElementException:
+            pass
+      
         browser.execute_script("""
             (function(XHR){
                 "use strict";
@@ -302,26 +316,16 @@ class googleimagesdownload:
                 XHR.prototype._data = [];
             })(XMLHttpRequest);
         """)
-
-        time.sleep(1)
-
-        # Bypass "Before you continue" if it appears
-        try:
-            browser.find_element_by_css_selector("[aria-label='Accept all']").click()
-            time.sleep(1)
-        except selenium.common.exceptions.NoSuchElementException:
-            pass
-
         print("Getting you a lot of images. This may take a few moments...")
-
-        element = browser.find_element_by_tag_name("body")
+       
+        element = browser.find_element(By.TAG_NAME, "body")
         # Scroll down
         for i in range(50):
             element.send_keys(Keys.PAGE_DOWN)
             time.sleep(0.3)
 
         try:
-            browser.find_element_by_xpath('//input[@value="Show more results"]').click()
+            browser.find_element(By.XPATH, '//input[@value="Show more results"]').click()
             for i in range(50):
                 element.send_keys(Keys.PAGE_DOWN)
                 time.sleep(0.3)  # bot id protection
